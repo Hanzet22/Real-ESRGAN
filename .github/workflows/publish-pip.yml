@@ -1,33 +1,37 @@
 name: PyPI Publish
 
-on: push
+on:
+  push:
+    tags:
+      - "v*"
 
 jobs:
   build-n-publish:
     runs-on: ubuntu-latest
-    if: startsWith(github.event.ref, 'refs/tags')
 
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v1
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.8
-      - name: Upgrade pip
-        run: pip install pip --upgrade
-      - name: Install PyTorch (cpu)
-        run: pip install torch==1.7.0+cpu torchvision==0.8.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
-      - name: Install dependencies
+          python-version: "3.11"
+
+      - name: Upgrade packaging tools
         run: |
-          pip install basicsr
-          pip install facexlib
-          pip install gfpgan
-          pip install -r requirements.txt
-      - name: Build and install
-        run: rm -rf .eggs && pip install -e .
-      - name: Build for distribution
-        run: python setup.py sdist bdist_wheel
-      - name: Publish distribution to PyPI
-        uses: pypa/gh-action-pypi-publish@master
+          python -m pip install --upgrade pip setuptools wheel build
+
+      - name: Install build dependencies
+        run: |
+          pip install basicsr facexlib gfpgan
+
+      - name: Build package
+        run: |
+          python -m build
+
+      - name: Publish to PyPI
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
